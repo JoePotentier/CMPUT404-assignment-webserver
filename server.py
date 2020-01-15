@@ -1,6 +1,5 @@
-#!/bin/python
+#!/usr/bin/python3
 #  coding: utf-8
-import socketserver
 
 # Copyright 2013 Abram Hindle, Eddie Antonio Santos
 #
@@ -27,44 +26,106 @@ import socketserver
 
 # try: curl -v -X GET http://127.0.0.1:8080/
 
+import socketserver
+import os
+import sys
+
+STATIC_FOLDER = os.getcwd() + "/www"
+
 # Partial Credit - sberry on StackOverflow - https://stackoverflow.com/a/18563980
 class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        # print("Got a request of: %s\n" % self.data)
-        code, file = self.parse_request(self.data)
-        if code == 200:
-            self.request.sendall(b"HTTP/1.1 200 OK\n")
-            self.request.sendall(b"Content-Type: text/html; charset=ISO-8859-4")
-            self.request.sendall(file.read().encode())
-        else:
-            self.request.sendall(b"HTTP/1.1 404 Not Found\n")
+        self.method, self.path, self.host = self.get_method_path_host(self.data)
+        if self.method != "GET":
+            return self.error_handler(405)
+        self.path = self.resolve_path(self.path)
+        if self.path != None:
+            data = self.fetch_file(self.path)
+            if data != None:
+                self.request.sendall(b"HTTP/1.1 200 OK\r\n")
+                self.determine_mime(self.path)
+                self.request.sendall(data.encode())
+        self.request.sendall(b"Connection: close\r\n")
 
-    def parse_request(self, req_data):
-        req_data = req_data.decode("UTF-8")
-        print(req_data.splitlines())
-        req_data = req_data.splitlines()
-        method, path = self.extract_method(req_data[0])
-        code, file = self.fetch_file(path)
-        if file is not None:
-            return 200, file
-        else:
-            return code, None
+    def get_method_path_host(self, data):
+        data = data.decode("utf-8")
+        split_header = data.splitlines()
+        split_top = split_header[0].split(" ")
+        method = split_top[0]
+        path = split_top[1]
+        host = split_header[1].split(" ")[1]
+        return method, path, host
 
-    def extract_method(self, line_in):
-        lines = line_in.split(" ")
-        return lines[0], lines[1]
+    def error_handler(self, code):
+        if code == 405:
+            self.request.sendall(b"HTTP/1.1 405 Method Not Allowed\r\n")
+        elif code == 301:
+            self.request.sendall(b"HTTP/1.1 301 Moved Permanently\r\n")
+        elif code == 404:
+            self.request.sendall(b"HTTP/1.1 404 Not Found\r\n")
+
+    def resolve_path(self, path):
+        if path[-5:] == ".html":
+            new_path = STATIC_FOLDER + path
+        elif path[-4:] == ".css":
+            new_path = STATIC_FOLDER + path
+        elif path[len(path) - 1] != "/":
+            self.error_handler(301)
+            corrected_path = f"Location: http://{self.host}{self.path}/"
+            self.request.sendall(corrected_path.encode("utf-8") + b"\r\n")
+            return None
+        elif path[len(path) - 1] == "/":
+            new_path = STATIC_FOLDER + path + "index.html"
+        return new_path
 
     def fetch_file(self, path):
-        if path == "/":
-            path = "/index.html"
-        path = f"./www{path}"
         try:
-            file = open(path)
+            return open(path).read()
         except FileNotFoundError:
-            return 404, None
+            self.error_handler(404)
 
-        return 200, open(path)
+    def determine_mime(self, path):
+        if path[-5:] == ".html":
+            return self.request.sendall(b"Content-Type: text/html\r\n")
+        elif path[-4:] == ".css":
+            return self.request.sendall(b"Content-Type: text/css\r\n")
+
+    # def is_valid_path(self, path, follow_symlinks=True):
+    #     # resolves symbolic links
+    #     if follow_symlinks:
+    #         return os.path.realpath(path).startswith(STATIC_FOLDER)
+
+    #     return os.path.abspath(path).startswith(STATIC_FOLDER)
+
+    # def parse_request(self, req_data):
+    #     req_data = req_data.decode("UTF-8")
+    #     print(req_data.splitlines())
+    #     req_data = req_data.splitlines()
+    #     method, path = self.extract_method(req_data[0])
+    #     code, file = self.fetch_file(path)
+    #     if file is not None:
+    #         return 200, file
+    #     else:
+    #         return code, None
+
+    # def extract_method(self, line_in):
+    #     lines = line_in.split(" ")
+    #     return lines[0], lines[1]
+
+    # def fetch_file(self, path):
+    #     if path == "/":
+    #         path = "/index.html"
+    #     path = f"./www{path}"
+    #     try:
+    #         file = open(path)
+    #         return 200, file
+    #     except FileNotFoundError:
+    #         return 404, None
+
+    def is_safe_dir(self, path):
+        # https://security.openstack.org/guidelines/dg_using-file-paths.html
+        pass
 
 
 if __name__ == "__main__":

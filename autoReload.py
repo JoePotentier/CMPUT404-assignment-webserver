@@ -16,9 +16,7 @@ class SourceChangeMonitor(threading.Thread):
     FILE_PATTERN = r"[!.]*.py"
 
     # Which directory is the root of the source files?
-    ROOT_DIRECTORY = (
-        r"/home/joedesktop/Documents/cmput-404/CMPUT404-assignment-webserver"
-    )
+    ROOT_DIRECTORY = os.getcwd()
 
     # Entry point program to run
     PROGRAM = r"server.py"
