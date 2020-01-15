@@ -1,3 +1,4 @@
+#!/bin/python
 #  coding: utf-8
 import socketserver
 
@@ -31,12 +32,39 @@ class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
         # print("Got a request of: %s\n" % self.data)
-        self.parse_request(self.data)
-        self.request.sendall(b"HTTP/1.1 200 OK\n")
+        code, file = self.parse_request(self.data)
+        if code == 200:
+            self.request.sendall(b"HTTP/1.1 200 OK\n")
+            self.request.sendall(b"Content-Type: text/html; charset=ISO-8859-4")
+            self.request.sendall(file.read().encode())
+        else:
+            self.request.sendall(b"HTTP/1.1 404 Not Found\n")
 
     def parse_request(self, req_data):
-        # req_data = req_data.decode("UTF-8")
+        req_data = req_data.decode("UTF-8")
         print(req_data.splitlines())
+        req_data = req_data.splitlines()
+        method, path = self.extract_method(req_data[0])
+        code, file = self.fetch_file(path)
+        if file is not None:
+            return 200, file
+        else:
+            return code, None
+
+    def extract_method(self, line_in):
+        lines = line_in.split(" ")
+        return lines[0], lines[1]
+
+    def fetch_file(self, path):
+        if path == "/":
+            path = "/index.html"
+        path = f"./www{path}"
+        try:
+            file = open(path)
+        except FileNotFoundError:
+            return 404, None
+
+        return 200, open(path)
 
 
 if __name__ == "__main__":
