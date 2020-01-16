@@ -29,7 +29,6 @@ class TestYourWebserver(unittest.TestCase):
     def test_css(self):
         url = self.baseurl + "/base.css"
         req = request.urlopen(url, None, 3)
-        print(url)
         self.assertTrue(req.getcode() == 200, "200 OK Not FOUND!")
         self.assertTrue(
             req.info().get_content_type() == "text/css",

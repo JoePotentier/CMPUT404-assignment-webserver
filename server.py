@@ -44,9 +44,11 @@ class MyWebServer(socketserver.BaseRequestHandler):
             data = self.fetch_file(self.path)
             if data != None:
                 self.request.sendall(b"HTTP/1.1 200 OK\r\n")
+                self.request.sendall(b"Connection: close\r\n")
+                # self.request.sendall(b"Transfer-encoding: identity\r\n")
                 self.determine_mime(self.path)
+                self.request.sendall(b"\r\n")
                 self.request.sendall(data.encode())
-        self.request.sendall(b"Connection: close\r\n")
 
     def get_method_path_host(self, data):
         data = data.decode("utf-8")
@@ -71,9 +73,15 @@ class MyWebServer(socketserver.BaseRequestHandler):
         elif path[-4:] == ".css":
             new_path = STATIC_FOLDER + path
         elif path[len(path) - 1] != "/":
-            self.error_handler(301)
-            corrected_path = f"Location: http://{self.host}{self.path}/"
-            self.request.sendall(corrected_path.encode("utf-8") + b"\r\n")
+            if os.path.isdir(STATIC_FOLDER + path):
+                self.error_handler(301)
+                corrected_path = f"Location: http://{self.host}{self.path}/\r\n"
+                # test = corrected_path.encode() + b"\r\n"
+                self.request.sendall(corrected_path.encode())
+                # print(corrected_path.encode() + b"\r\n")
+                # self.request.sendall(b"Connection: close\r\n")
+            else:
+                self.error_handler(404)
             return None
         elif path[len(path) - 1] == "/":
             new_path = STATIC_FOLDER + path + "index.html"
@@ -87,9 +95,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     def determine_mime(self, path):
         if path[-5:] == ".html":
-            return self.request.sendall(b"Content-Type: text/html\r\n")
+            return self.request.sendall(b"Content-Type: text/html; charset=UTF-8\r\n")
         elif path[-4:] == ".css":
-            return self.request.sendall(b"Content-Type: text/css\r\n")
+            return self.request.sendall(b"Content-Type: text/css; charset=UTF-8\r\n")
 
     # def is_valid_path(self, path, follow_symlinks=True):
     #     # resolves symbolic links
