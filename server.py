@@ -47,7 +47,10 @@ class MyWebServer(socketserver.BaseRequestHandler):
         split_top = split_header[0].split(" ")
         method = split_top[0]
         path = split_top[1]
-        host = split_header[1].split(" ")[1]
+        i = 1
+        while split_header[i][:5] != "Host:":
+            i += 1
+        host = split_header[i].split(" ")[1]
         return method, path, host
 
     def error_handler(self, code):
@@ -56,7 +59,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.response += "Allow: GET\r\n"
         elif code == 301:
             self.response += "HTTP/1.1 301 Moved Permanently\r\n"
-            self.response += f"Location: {self.path}/\r\n"
+            self.response += f"Location: http://{self.host}{self.path}/\r\n"
         elif code == 404:
             self.response += "HTTP/1.1 404 Not Found\r\n"
         self.response += "Connection: close\r\n"
