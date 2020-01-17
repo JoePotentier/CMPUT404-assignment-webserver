@@ -102,6 +102,8 @@ class TestYourWebserver(unittest.TestCase):
         except request.HTTPError as e:
             code = e.getcode()
             self.assertTrue(code >= 300 and code < 400, "300ish Not FOUND! %s" % code)
+        except request.URLError as e:
+            print(e.reason)
 
     def test_html(self):
         url = self.baseurl + "/index.html"

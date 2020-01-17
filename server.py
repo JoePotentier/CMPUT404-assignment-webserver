@@ -36,7 +36,7 @@ STATIC_FOLDER = os.getcwd() + "/www"
 class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
         self.data = self.request.recv(1024).strip()
-        self.method, self.path, self.host = self.get_method_path_host(self.data)
+        self.method, self.path = self.get_method_path_host(self.data)
         if self.method != "GET":
             return self.error_handler(405)
         self.path = self.resolve_path(self.path)
@@ -52,12 +52,10 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     def get_method_path_host(self, data):
         data = data.decode("utf-8")
-        split_header = data.splitlines()
-        split_top = split_header[0].split(" ")
+        split_top = data.splitlines()[0].split(" ")
         method = split_top[0]
         path = split_top[1]
-        host = split_header[1].split(" ")[1]
-        return method, path, host
+        return method, path
 
     def error_handler(self, code):
         if code == 405:
@@ -75,11 +73,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
         elif path[len(path) - 1] != "/":
             if os.path.isdir(STATIC_FOLDER + path):
                 self.error_handler(301)
-                corrected_path = f"Location: http://{self.host}{self.path}/\r\n"
-                # test = corrected_path.encode() + b"\r\n"
+                corrected_path = f"Location: {self.path}/\r\n"
                 self.request.sendall(corrected_path.encode())
-                # print(corrected_path.encode() + b"\r\n")
-                # self.request.sendall(b"Connection: close\r\n")
+                self.request.sendall(b"Connection: keep-alive\r\n")
             else:
                 self.error_handler(404)
             return None
@@ -131,9 +127,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
     #     except FileNotFoundError:
     #         return 404, None
 
-    def is_safe_dir(self, path):
-        # https://security.openstack.org/guidelines/dg_using-file-paths.html
-        pass
+    # def is_safe_dir(self, path):
+    #     # https://security.openstack.org/guidelines/dg_using-file-paths.html
+    #     pass
 
 
 if __name__ == "__main__":
