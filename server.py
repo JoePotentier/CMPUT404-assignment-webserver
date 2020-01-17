@@ -25,34 +25,42 @@ STATIC_FOLDER = os.getcwd() + "/www"
 
 class MyWebServer(socketserver.BaseRequestHandler):
     def handle(self):
+        self.response = ""
         self.data = self.request.recv(1024).strip()
-        self.method, self.path = self.get_method_path_host(self.data)
+        self.method, self.path, self.host = self.get_method_path_host(self.data)
         if self.method != "GET":
             return self.error_handler(405)
         self.path = self.resolve_path(self.path)
         if self.path != None:
             data = self.fetch_file(self.path)
             if data != None:
-                self.request.sendall(b"HTTP/1.1 200 OK\r\n")
-                self.request.sendall(b"Connection: close\r\n")
+                self.response += "HTTP/1.1 200 OK\r\n"
                 self.determine_mime(self.path)
-                self.request.sendall(b"\r\n")
-                self.request.sendall(data.encode())
+                self.response += "Connection: close\r\n"
+                self.response += "\r\n"
+                self.response += data
+                self.request.sendall(self.response.encode("UTF-8"))
 
     def get_method_path_host(self, data):
         data = data.decode("utf-8")
-        split_top = data.splitlines()[0].split(" ")
+        split_header = data.splitlines()
+        split_top = split_header[0].split(" ")
         method = split_top[0]
         path = split_top[1]
-        return method, path
+        host = split_header[1].split(" ")[1]
+        return method, path, host
 
     def error_handler(self, code):
         if code == 405:
-            self.request.sendall(b"HTTP/1.1 405 Method Not Allowed\r\n")
+            self.response += "HTTP/1.1 405 Method Not Allowed\r\n"
+            self.response += "Allow: GET\r\n"
         elif code == 301:
-            self.request.sendall(b"HTTP/1.1 301 Moved Permanently\r\n")
+            self.response += "HTTP/1.1 301 Moved Permanently\r\n"
+            self.response += f"Location: {self.path}/\r\n"
         elif code == 404:
-            self.request.sendall(b"HTTP/1.1 404 Not Found\r\n")
+            self.response += "HTTP/1.1 404 Not Found\r\n"
+        self.response += "Connection: close\r\n"
+        self.request.sendall(self.response.encode("UTF-8"))
 
     def resolve_path(self, path):
         if path[-5:] == ".html":
@@ -62,9 +70,6 @@ class MyWebServer(socketserver.BaseRequestHandler):
         elif path[len(path) - 1] != "/":
             if os.path.isdir(STATIC_FOLDER + path):
                 self.error_handler(301)
-                corrected_path = f"Location: {self.path}/\r\n"
-                self.request.sendall(corrected_path.encode())
-                self.request.sendall(b"Connection: keep-alive\r\n")
             else:
                 self.error_handler(404)
             return None
@@ -80,9 +85,9 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     def determine_mime(self, path):
         if path[-5:] == ".html":
-            return self.request.sendall(b"Content-Type: text/html; charset=UTF-8\r\n")
+            self.response += "Content-Type: text/html; charset=UTF-8\r\n"
         elif path[-4:] == ".css":
-            return self.request.sendall(b"Content-Type: text/css; charset=UTF-8\r\n")
+            self.response += "Content-Type: text/css; charset=UTF-8\r\n"
 
 
 if __name__ == "__main__":
