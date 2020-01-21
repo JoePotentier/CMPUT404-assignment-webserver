@@ -17,6 +17,7 @@ server.py contains contributions from:
 - Jackson Z Chang
 - Mandy Meindersma
 - Joseph Potentier
+- Florian Bösch (Credit for date formatting: Florian Bösch on StackOverflow - https://stackoverflow.com/a/225106)
 
 But the server.py example is derived from the python documentation
 examples thus some of the code is Copyright © 2001-2013 Python

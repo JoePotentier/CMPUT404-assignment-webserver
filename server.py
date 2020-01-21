@@ -19,6 +19,10 @@
 import socketserver
 import os
 import sys
+from email.utils import formatdate
+from datetime import datetime
+from time import mktime
+
 
 STATIC_FOLDER = os.getcwd() + "/www"
 
@@ -36,10 +40,13 @@ class MyWebServer(socketserver.BaseRequestHandler):
             if data != None:
                 self.response += "HTTP/1.1 200 OK\r\n"
                 self.determine_mime(self.path)
+                self.setContentLen(data)
+                self.setServer()
+                self.setDateHeader()
                 self.response += "Connection: close\r\n"
                 self.response += "\r\n"
                 self.response += data
-                self.request.sendall(self.response.encode("UTF-8"))
+                self.request.sendall(self.response.encode("utf-8"))
 
     def get_method_path_host(self, data):
         data = data.decode("utf-8")
@@ -57,13 +64,22 @@ class MyWebServer(socketserver.BaseRequestHandler):
         if code == 405:
             self.response += "HTTP/1.1 405 Method Not Allowed\r\n"
             self.response += "Allow: GET\r\n"
+            self.setServer()
+            self.setDateHeader()
+            self.response += "Connection: close\r\n"
         elif code == 301:
             self.response += "HTTP/1.1 301 Moved Permanently\r\n"
             self.response += f"Location: http://{self.host}{self.path}/\r\n"
+            self.setServer()
+            self.setDateHeader()
+            self.response += "Connection: keep-alive\r\n"
         elif code == 404:
             self.response += "HTTP/1.1 404 Not Found\r\n"
-        self.response += "Connection: close\r\n"
-        self.request.sendall(self.response.encode("UTF-8"))
+            self.setServer()
+            self.setDateHeader()
+            self.response += "Connection: close\r\n"
+
+        self.request.sendall(self.response.encode("utf-8"))
 
     def resolve_path(self, path):
         if path[-5:] == ".html":
@@ -91,6 +107,21 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.response += "Content-Type: text/html; charset=UTF-8\r\n"
         elif path[-4:] == ".css":
             self.response += "Content-Type: text/css; charset=UTF-8\r\n"
+
+    def setDateHeader(self):
+        # Credit for date formatting: Florian Bösch on StackOverflow - https://stackoverflow.com/a/225106
+        now = datetime.now()
+        stamp = mktime(now.timetuple())
+        self.response += (
+            f"Date: {formatdate(timeval=stamp, localtime=False, usegmt=True)}\r\n"
+        )
+
+    def setContentLen(self, data):
+        length = len(data.encode("utf-8"))
+        self.response += f"Content-Length: {length}\r\n"
+
+    def setServer(self):
+        self.response += "Server: NOTGODADDY/1.1\r\n"
 
 
 if __name__ == "__main__":
