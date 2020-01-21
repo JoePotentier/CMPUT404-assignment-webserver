@@ -140,7 +140,7 @@ class MyWebServer(socketserver.BaseRequestHandler):
         if code == 405:
             return "<h1>Error: 405 Method Not Allowed</h1><p>We only accept GET requests.</p>"
         if code == 301:
-            return f"<h1>Error: 301 Moved Permanently</h1><p>The page you request has moved.</p><p>Location: http://{self.host}{self.path}/</p>"
+            return f"<h1>Error: 301 Moved Permanently</h1><p>The page you request has moved.</p><p>Location: <a href='http://{self.host}{self.path}/'>http://{self.host}{self.path}/</a></p>"
         if code == 404:
             return "<h1>Error: 404 Not Found</h1><p>The file you requested was not found.</p>"
 
