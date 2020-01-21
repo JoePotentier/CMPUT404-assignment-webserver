@@ -66,18 +66,31 @@ class MyWebServer(socketserver.BaseRequestHandler):
             self.response += "Allow: GET\r\n"
             self.setServer()
             self.setDateHeader()
+            data = self.getErrorPageHtml(405)
+            self.setContentLen(data)
             self.response += "Connection: close\r\n"
+            self.response += "\r\n"
+            self.response += data
+
         elif code == 301:
             self.response += "HTTP/1.1 301 Moved Permanently\r\n"
             self.response += f"Location: http://{self.host}{self.path}/\r\n"
             self.setServer()
             self.setDateHeader()
+            data = self.getErrorPageHtml(301)
+            self.setContentLen(data)
             self.response += "Connection: keep-alive\r\n"
+            self.response += "\r\n"
+            self.response += data
         elif code == 404:
             self.response += "HTTP/1.1 404 Not Found\r\n"
             self.setServer()
             self.setDateHeader()
+            data = self.getErrorPageHtml(404)
+            self.setContentLen(data)
             self.response += "Connection: close\r\n"
+            self.response += "\r\n"
+            self.response += data
 
         self.request.sendall(self.response.encode("utf-8"))
 
@@ -122,6 +135,14 @@ class MyWebServer(socketserver.BaseRequestHandler):
 
     def setServer(self):
         self.response += "Server: NOTGODADDY/1.1\r\n"
+
+    def getErrorPageHtml(self, code):
+        if code == 405:
+            return "<h1>Error: 405 Method Not Allowed</h1><p>We only accept GET requests.</p>"
+        if code == 301:
+            return f"<h1>Error: 301 Moved Permanently</h1><p>The page you request has moved.</p><p>Location: http://{self.host}{self.path}/</p>"
+        if code == 404:
+            return "<h1>Error: 404 Not Found</h1><p>The file you requested was not found.</p>"
 
 
 if __name__ == "__main__":
