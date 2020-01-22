@@ -137,12 +137,18 @@ class MyWebServer(socketserver.BaseRequestHandler):
         self.response += "Server: NOTGODADDY/1.1\r\n"
 
     def getErrorPageHtml(self, code):
+        html = "<!DOCTYPE html><html>"
         if code == 405:
-            return "<h1>Error: 405 Method Not Allowed</h1><p>We only accept GET requests.</p>"
+            html += "<head><title>405 Method Not Allowed</title></head>"
+            html += "<body><h1>Error: 405 Method Not Allowed</h1><p>We only accept GET requests.</p></body>"
         if code == 301:
-            return f"<h1>Error: 301 Moved Permanently</h1><p>The page you request has moved.</p><p>Location: <a href='http://{self.host}{self.path}/'>http://{self.host}{self.path}/</a></p>"
+            html += "<head><title>301 Moved Permanently</title></head>"
+            html += f"<body><h1>Error: 301 Moved Permanently</h1><p>The page you request has moved.</p><p>Location: <a href='http://{self.host}{self.path}/'>http://{self.host}{self.path}/</a></p></body>"
         if code == 404:
-            return "<h1>Error: 404 Not Found</h1><p>The file you requested was not found.</p>"
+            html += "<head><title>404 Not Found</title></head>"
+            html += "<body><h1>Error: 404 Not Found</h1><p>The file you requested was not found.</p></body>"
+        html += "</html>"
+        return html
 
 
 if __name__ == "__main__":
